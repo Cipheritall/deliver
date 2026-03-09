@@ -1,0 +1,17 @@
+{
+  "name": "@delivery/database",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "types": "index.ts",
+  "license": "MIT",
+  "scripts": {
+    "generate": "prisma generate",
+    "seed": "node seed.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.0.0"
+  }
+}

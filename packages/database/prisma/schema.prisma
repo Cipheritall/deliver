@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  role      Role      @default(CUSTOMER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  packages  Package[] @relation("Sender")
+  received  Package[] @relation("Receiver")
+}
+
+enum Role {
+  ADMIN
+  COURIER
+  RELAY_OWNER
+  CUSTOMER
+}
+
+model Package {
+  id             String   @id @default(uuid())
+  trackingId     String   @unique
+  senderId       Int
+  receiverId     Int
+  status         Status   @default(PENDING)
+  currentLocation String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  sender         User     @relation("Sender", fields: [senderId], references: [id])
+  receiver       User     @relation("Receiver", fields: [receiverId], references: [id])
+  events         Event[]
+}
+
+enum Status {
+  PENDING
+  PICKED_UP
+  IN_TRANSIT
+  AT_RELAY
+  DELIVERED
+}
+
+model Event {
+  id          Int      @id @default(autoincrement())
+  packageId   String
+  description String
+  location    String?
+  createdAt   DateTime @default(now())
+  package     Package  @relation(fields: [packageId], references: [id])
+}
+
+model AdminManagedUser {
+  id        String               @id @default(cuid())
+  email     String               @unique
+  name      String
+  role      AdminManagedUserRole
+  createdBy String
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  deletedAt DateTime?
+  deletedBy String?
+
+  @@index([deletedAt])
+}
+
+model AdminTicket {
+  id          String         @id @default(cuid())
+  ticketNo    String         @unique
+  subject     String
+  description String?
+  priority    TicketPriority @default(MEDIUM)
+  status      TicketStatus   @default(OPEN)
+  ownerName   String
+  ownerEmail  String?
+  createdBy   String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+  deletedBy   String?
+  comments    AdminTicketComment[]
+  deleteRequests AdminTicketDeleteRequest[]
+
+  @@index([status, priority])
+  @@index([deletedAt])
+}
+
+model AdminTicketComment {
+  id        String      @id @default(cuid())
+  ticketId  String
+  body      String
+  author    String
+  createdAt DateTime    @default(now())
+  ticket    AdminTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+}
+
+model AdminTicketDeleteAuthorization {
+  id             String   @id @default(cuid())
+  moderatorEmail String   @unique
+  isActive       Boolean  @default(true)
+  grantedBy      String
+  grantedAt      DateTime @default(now())
+  revokedBy      String?
+  revokedAt      DateTime?
+  updatedAt      DateTime @updatedAt
+
+  @@index([isActive, moderatorEmail])
+}
+
+model AdminTicketDeleteRequest {
+  id          String              @id @default(cuid())
+  ticketId    String
+  reason      String
+  status      DeleteRequestStatus @default(PENDING)
+  requestedBy String
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime            @default(now())
+  ticket      AdminTicket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, status])
+  @@index([status, createdAt])
+}
+
+enum AdminManagedUserRole {
+  ADMIN
+  MOD
+  AGENT
+  RELAY_USER
+  DELIVERY_USER
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  BLOCKED
+  RESOLVED
+  CLOSED
+}
+
+enum DeleteRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
